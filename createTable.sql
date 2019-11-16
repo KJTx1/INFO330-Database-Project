@@ -244,3 +244,22 @@ EXEC populate_userevent
 GO
 
 
+CREATE PROCEDURE populate_attachment
+@AttachmentTypeName VARCHAR(20),
+@Text VARCHAR(140),
+@User1Name VARCHAR(20),
+@EventName VARCHAR(20),
+@TopicName VARCHAR(50),
+@LocationName VARCHAR(100),
+@AttachmentLink VARCHAR(200)
+AS
+DECLARE @AttachmentTypeID INT, @TweetID INT, @UserID INT, @LocationID INT, @EventID INT, @TopicID INT
+SET @AttachmentTypeID = (SELECT AttachmentTypeID FROM tblATTACHMENT_TYPE WHERE AttachmentTypeName = @AttachmentTypeName)
+SET @UserID = (SELECT UserID FROM tblUSER WHERE DisplayName = @User1Name)
+SET @EventID = (SELECT EventID FROM tblTWEET_EVENT WHERE EventName = @EventName)
+SET @TopicID = (SELECT TopicID FROM tblTOPIC_TYPE WHERE TopicTypeName = @TopicName)
+SET @LocationID = (SELECT LocationID FROM tblLOCATION WHERE LocationName = @LocationName)
+SET @TweetID = (SELECT TweetID FROM tblTWEET WHERE Text = @text AND UserID = @UserID 
+                AND LocationID = @LocationID AND TopicID = @TopicID AND EventID = @EventID)
+INSERT INTO tblATTACHMENT(AttachmentTypeID, TweetID, AttachmentLink)
+VALUES(@AttachmentTypeID, TweetID, attachmentlink)
