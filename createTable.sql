@@ -37,15 +37,8 @@ UserEventTypeDescr VARCHAR(100)
 
 CREATE TABLE tblTWEET_EVENT
 (EventID INT IDENTITY(1,1) primary key NOT NULL,
-EventTypeID INT FOREIGN KEY REFERENCES tblTWEET_EVENT_TYPE(EventTypeID) NOT NULL,
 EventName VARCHAR(20) NOT NULL,
-EventNameDescr VARCHAR(100)
-)
-
-CREATE TABLE tblTWEET_EVENT_TYPE 
-(EventTypeID INT IDENTITY(1,1) primary key NOT NULL,
-EventTypeName VARCHAR(20) NOT NULL,
-EventTypeDescr VARCHAR(100)
+EventDescr VARCHAR(100)
 )
 
 CREATE TABLE tblLOCATION
@@ -79,6 +72,92 @@ CREATE TABLE tblATTACHMENT_TYPE
 (AttachmentTypeID INT IDENTITY(1,1) primary key NOT NULL,
 AttachmentTypeName VARCHAR(20) NOT NULL
 )
+
+INSERT INTO tblTopicType(TopicTypeName) VALUES ('Entertainment'), ('News'), ('Sports'), ('Fun')
+
+INSERT INTO tblATTACHMENT_TYPE(AttachmentTypeName) VALUES ('Video'), ('Image'), ('GIF')
+
+INSERT INTO tblTWEET_EVENT(EventName, EventDescr) VALUES 
+('Mention', 'A Tweet that contains another person’s username anywhere in the body of the Tweet'),
+('Reply', 'A response to another person’s Tweet.'),
+('Retweet', 'A Tweet that you share publicly with your followers')
+
+INSERT INTO tblUSER_EVENT_TYPE(UserEventTypeName, UserEventTypeDescr) VALUES 
+('Follow', 'The user are subscribing to their Tweets as a follower, their updates will appear in your Home timeline, that person is able to send you Direct Messages'),
+('Block', 'Blocking helps people in restricting specific accounts from contacting them, seeing their Tweets, and following them.'),
+('Unfollow', 'People unfollow other accounts when they no longer wish to see its Tweets in its home timeline.')
+
+INSERT INTO tblLOCATION(LocationName) VALUES 
+('Alabama'), ('Alaska'), ('Arizona'), ('Arkansas'), ('California'), ('Colorado'), ('Connecticut'),
+('Delaware'), ('Florida'), ('Georgia'), ('Hawaii'), ('Idaho'), ('Illinois'), ('Indiana'), ('Iowa'),
+('Kansas'), ('Kentucky'), ('Louisiana'), ('Maine'), ('Maryland'), ('Massachusetts'), ('Michigan'), 
+('Minnesota'), ('Mississippi'), ('Missouri'), ('Montana'), ('Nebraska'), ('Nevada'), ('New Hampshire'), 
+('New Jersey'), ('New Mexico'), ('New York'), ('North Carolina'), ('North Dakota'), ('Ohio'), ('Oklahoma'), 
+('Oregon'), ('Pennsylvania'), ('Rhode Island'), ('South Carolina'), ('South Dakota'), ('Tennessee'), ('Texas'), 
+('Utah'), ('Vermont'), ('Virginia'), ('Washington'), ('West Virginia'), ('Wisconsin'), ('Wyoming')
+
+INSERT INTO tblUSER(DisplayName) VALUES ('Jchang'), ('JAsonY'), ('ChrisC'), ('Gthay'), ('KennytheCat')
+
+GO
+
+-- INSERT INTO tblTWEET(Content, UserID, EventID, TopicTypeID, LocationID) VALUES 
+
+CREATE PROCEDURE populate_tweets
+    @Content VARCHAR(140),
+    @DisplayName varchar(20),
+    @EventName VARCHAR(20),
+    @TopicTypeName varchar(50),
+    @LocationName VARCHAR(100)
+    AS
+    DECLARE @UserID INT, @EventID INT , @TopicTypeID INT, @LocationID INT
+    SET @UserID = (SELECT UserID FROM tblUSER WHERE DisplayName = @DisplayName)
+    SET @EventID = (SELECT EventID FROM tblTWEET_EVENT WHERE EventName = @EventName)
+    SET @TopicTypeID = (SELECT TopicTypeID FROM tblTopicType WHERE TopicTypeName = @TopicTypeName)
+    SET @LocationID = (SELECT LocationID FROM tblLOCATION WHERE LocationName = @LocationName)
+
+INSERT INTO tblTWEET(Content, UserID, EventID, TopicTypeID, LocationID)
+VALUES(@Content, @UserID, @EventID, @TopicTypeID, @LocationID)
+
+GO
+
+EXEC populate_tweets
+@displayname = 'ChrisC',
+@content = 'BTS is legend',
+@eventname = 'tweet',
+@TopicTypeName = 'Entertaiment',
+@locationname = 'California'
+
+EXEC populate_tweets
+@displayname = 'Jchang',
+@content = 'Greg holds the key to a vault of Cliff Bars.',
+@eventname = 'tweet',
+@TopicTypeName = 'Entertaiment',
+@locationname = 'Washington'
+
+EXEC populate_tweets
+@displayname = 'KennytheCat',
+@content ='Kenny the Cat wants to become a youtube vlogger. Kenny first got 37 subscribers from INFO 330 B section.',
+@eventname = 'tweet',
+@TopicTypeName = 'News',
+@locationname = 'Illinois'
+
+EXEC populate_tweets
+@displayname = 'Gthay',
+@content ='Kenny the Cat wants to become a youtube vlogger. Kenny first got 37 subscribers from INFO 330 B section',
+@eventname = 'retweet',
+@TopicTypeName = 'Entertaiment',
+@locationname = 'Oregon'
+
+
+EXEC populate_tweets
+@displayname = 'JasonY',
+@content ='Greg feeds cats, raises plants, and does ASMR in Zoom meetings.',
+@eventname = 'tweet',
+@TopicTypeName = 'Fun',
+@locationname = 'New York'
+
+GO
+
 
 
 
