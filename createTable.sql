@@ -158,10 +158,88 @@ EXEC populate_tweets
 
 GO
 
+CREATE PROCEDURE populate_user
+@DisplayName varchar(20),
+@Description VARCHAR(140),
+@Banner varchar(100),
+@Icon VARCHAR(100)
+AS
+INSERT INTO tblUSER(DisplayName, Bio, Banner, Icon)
+VALUES(@DisplayName, @Description, @Banner, @Icon)
+
+GO
+
+EXEC populate_user
+@Displayname = 'JasonY',
+@Description = 'an assiduous 330 student',
+@Banner = 'https://scontent-sea1-1.xx.fbcdn.net/v/t1.0-9/20992707_1883478058645945_5708501379096891682_n.jpg?_nc_cat=103&_nc_oc=AQm9pfr0Wr9oHiWJwlyY_k7gZV6FkPEg9Amv_B2xAImoIKPm-u9L6B1kD3XIl6iiokQ&_nc_ht=scontent-sea1-1.xx&oh=c0728af458279531fc73c9f25872b617&oe=5E467663',
+@Icon = 'https://scontent-sea1-1.xx.fbcdn.net/v/t1.0-9/70987434_2397297587263987_1417482354645008384_n.jpg?_nc_cat=100&_nc_oc=AQk4-SWkGbom7InDKEQQH73mya3LbMf-teSUlgXWkqF5bybksrTRUG6jM4bckpGgp_I&_nc_ht=scontent-sea1-1.xx&oh=4e8e8dd9327a24401d0b6d3b821df7ff&oe=5E452BB0'
+
+EXEC populate_user
+@Displayname = 'KennytheCat',
+@Description = 'THE CAT',
+@Banner = 'https://vignette.wikia.nocookie.net/spongebob/images/9/90/Kenny_the_Cat_title_card.png/revision/latest/scale-to-width-down/700?cb=20180726154623',
+@Icon = 'https://pbs.twimg.com/media/C9QDnbcUIAAYmC4.jpg'
+
+EXEC populate_user
+@Displayname = 'ChrisC',
+@Description = 'Just for BTS.',
+@Banner = 'https://twitter.com/Cookiewrestler1/photo',
+@Icon = 'https://twitter.com/Cookiewrestler1/header_photo'
+
+EXEC populate_user
+@Displayname = 'Jchang',
+@Description = 'The Best 330 project leader:)',
+@Banner = 'https://scontent-sea1-1.xx.fbcdn.net/v/t1.0-9/70185163_110747073648549_347894313776054272_o.jpg?_nc_cat=102&_nc_oc=AQl3rzFMCLkqmtXNyTiDspYfhcCX65A6cUGN9yDOrw_6UB50q5Nw-b1ghmck0j6xEuw&_nc_ht=scontent-sea1-1.xx&oh=fc45ef26e9db2f1480f8d0f57a73c570&oe=5E517033',
+@Icon = 'https://scontent-sea1-1.xx.fbcdn.net/v/t1.0-9/73528726_157345612322028_3611512238269005824_n.jpg?_nc_cat=111&_nc_oc=AQmGA5JXstUw4111d8NZjWf7G40tEEFHhQAvuX-iyv5aKONIpJLZqx_ZoqdvGGx6qR8&_nc_ht=scontent-sea1-1.xx&oh=cb6a45227718248e5fa697dd084fc7da&oe=5E4E843C'
+
+EXEC populate_user
+@Displayname = 'Gthay',
+@Description = 'Database, Cat, and Cliff Bar',
+@Banner = 'https://scontent-sea1-1.xx.fbcdn.net/v/t1.0-9/70987434_2397297587263987_1417482354645008384_n.jpg?_nc_cat=100&_nc_oc=AQk4-SWkGbom7InDKEQQH73mya3LbMf-teSUlgXWkqF5bybksrTRUG6jM4bckpGgp_I&_nc_ht=scontent-sea1-1.xx&oh=4e8e8dd9327a24401d0b6d3b821df7ff&oe=5E452BB0',
+@Icon = 'https://assets.ischool.uw.edu/ai/gthay/pci/gthay-200x-1.jpg'
+
+GO 
+
+CREATE PROCEDURE populate_userevent
+@usereventtypename VARCHAR(20),
+@user1name VARCHAR(20),
+@user2name VARCHAR(20)
+
+AS
+DECLARE @UserID1 INT, @UserID2 INT, @usereventtype INT
+SET @UserID1 = (SELECT UserID FROM tblUSER WHERE DisplayName = @user1name)
+SET @UserID1 = (SELECT UserID FROM tblUSER WHERE DisplayName = @user2name)
+SET @UserEventTypeID = (SELECT EventID FROM tblTWEET_EVENT WHERE EventName = @eventname)
 
 
+INSERT INTO tblUSER_EVENT(UserEventTypeID, User1ID, User2ID)
+VALUES(@UserEventTypeID, @user1name, @user2name)
+
+EXEC populate_userevent
+@usereventtypename = 'Follow',
+@user1name = 'Gthay',
+@user2name = 'KennytheCat'
+
+EXEC populate_userevent
+@usereventtypename = 'Follow',
+@user1name = 'JAsonY',
+@user2name = 'Gthay'
+
+EXEC populate_userevent
+@usereventtypename = 'Follow',
+@user1name = 'ChrisC',
+@user2name = 'Gthay'
+
+EXEC populate_userevent
+@usereventtypename = 'Follow',
+@user1name = 'Jchang',
+@user2name = 'KennytheCat'
 
 
+EXEC populate_userevent
+@usereventtypename = 'Follow',
+@user1name = 'ChrisC',
+@user2name = 'KennytheCat'
 
-
-
+GO
