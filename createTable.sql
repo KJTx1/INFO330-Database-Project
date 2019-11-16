@@ -1,6 +1,6 @@
 -- create database sausage --
 
-USE Twitter_Trend
+USE Proj_B7
 
 CREATE TABLE tblTWEET 
 (TweetID INT IDENTITY(1, 1) primary key NOT NULL,
