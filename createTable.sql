@@ -212,7 +212,6 @@ SET @UserID1 = (SELECT UserID FROM tblUSER WHERE DisplayName = @user1name)
 SET @UserID1 = (SELECT UserID FROM tblUSER WHERE DisplayName = @user2name)
 SET @UserEventTypeID = (SELECT EventID FROM tblTWEET_EVENT WHERE EventName = @eventname)
 
-
 INSERT INTO tblUSER_EVENT(UserEventTypeID, User1ID, User2ID)
 VALUES(@UserEventTypeID, @user1name, @user2name)
 
@@ -243,3 +242,5 @@ EXEC populate_userevent
 @user2name = 'KennytheCat'
 
 GO
+
+
