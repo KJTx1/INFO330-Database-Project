@@ -262,4 +262,34 @@ SET @LocationID = (SELECT LocationID FROM tblLOCATION WHERE LocationName = @Loca
 SET @TweetID = (SELECT TweetID FROM tblTWEET WHERE Text = @text AND UserID = @UserID 
                 AND LocationID = @LocationID AND TopicID = @TopicID AND EventID = @EventID)
 INSERT INTO tblATTACHMENT(AttachmentTypeID, TweetID, AttachmentLink)
-VALUES(@AttachmentTypeID, TweetID, attachmentlink)
+VALUES(@AttachmentTypeID, @TweetID, @attachmentlink)
+
+GO
+
+CREATE PROCEDURE populate_hashtag
+@HashtagName VARCHAR(140)
+AS
+INSERT INTO tblHASHTAG(HashtagName)
+VALUES(@HashtagName)
+
+GO
+
+CREATE PROCEDURE populate_tweetHashtag
+@HashtagName VARCHAR(140),
+@Text VARCHAR(140),
+@UserName VARCHAR(20),
+@EventName VARCHAR(20),
+@TopicName VARCHAR(50),
+@LocationName VARCHAR(100),
+@Date_Time DATE
+AS
+DECLARE @TweetID INT, @HashtagID INT, @UserID INT, @EventID INT, @TopicID INT, @LocationID INT
+SET @HashtagID = (SELECT HashtagID FROM tblHASHTAG WHERE HashtagName = @HashtagName)
+SET @UserID = (SELECT UserID FROM tblUSER WHERE DisplayName = @UserName)
+SET @EventID = (SELECT EventID FROM tblTWEET_EVENT WHERE EventName = @EventName)
+SET @TopicID = (SELECT TopicID FROM tblTOPIC_TYPE WHERE TopicTypeName = @TopicName)
+SET @LocationID = (SELECT LocationID FROM tblLOCATION WHERE LocationName = @LocationName)
+SET @TweetID = (SELECT TweetID FROM tblTWEET WHERE Text = @Text AND UserID = @UserID 
+                AND LocationID = @LocationID AND TopicID = @TopicID AND EventID = @EventID)
+INSERT INTO tblTWEET_HASHTAG(HashtagID, TweetID)
+VALUES(@HashtagID, @TweetID)
