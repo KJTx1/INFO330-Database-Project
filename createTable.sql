@@ -115,9 +115,10 @@ CREATE PROCEDURE populate_tweets
     SET @TopicTypeID = (SELECT TopicTypeID FROM tblTopicType WHERE TopicTypeName = @TopicTypeName)
     SET @LocationID = (SELECT LocationID FROM tblLOCATION WHERE LocationName = @LocationName)
 
-INSERT INTO tblTWEET(Content, UserID, EventID, TopicTypeID, LocationID)
-VALUES(@Content, @UserID, @EventID, @TopicTypeID, @LocationID)
-
+    BEGIN TRANSACTION T1
+        INSERT INTO tblTWEET(Content, UserID, EventID, TopicTypeID, LocationID)
+        VALUES(@Content, @UserID, @EventID, @TopicTypeID, @LocationID)
+    COMMIT TRANSACTION T1
 GO
 
 EXEC populate_tweets
@@ -164,9 +165,10 @@ CREATE PROCEDURE populate_user
 @Banner varchar(100),
 @Icon VARCHAR(100)
 AS
-INSERT INTO tblUSER(DisplayName, Bio, Banner, Icon)
-VALUES(@DisplayName, @Description, @Banner, @Icon)
-
+    BEGIN TRANSACTION T1
+        INSERT INTO tblUSER(DisplayName, Bio, Banner, Icon)
+        VALUES(@DisplayName, @Description, @Banner, @Icon)
+    COMMIT TRANSACTION T1
 GO
 
 EXEC populate_user
@@ -212,8 +214,10 @@ SET @UserID1 = (SELECT UserID FROM tblUSER WHERE DisplayName = @user1name)
 SET @UserID1 = (SELECT UserID FROM tblUSER WHERE DisplayName = @user2name)
 SET @UserEventTypeID = (SELECT EventID FROM tblTWEET_EVENT WHERE EventName = @eventname)
 
-INSERT INTO tblUSER_EVENT(UserEventTypeID, User1ID, User2ID)
-VALUES(@UserEventTypeID, @user1name, @user2name)
+BEGIN TRANSACTION T1
+    INSERT INTO tblUSER_EVENT(UserEventTypeID, User1ID, User2ID)
+    VALUES(@UserEventTypeID, @user1name, @user2name)
+COMMIT TRANSACTION T1
 
 EXEC populate_userevent
 @usereventtypename = 'Follow',
@@ -261,16 +265,21 @@ SET @TopicID = (SELECT TopicID FROM tblTOPIC_TYPE WHERE TopicTypeName = @TopicNa
 SET @LocationID = (SELECT LocationID FROM tblLOCATION WHERE LocationName = @LocationName)
 SET @TweetID = (SELECT TweetID FROM tblTWEET WHERE Text = @text AND UserID = @UserID 
                 AND LocationID = @LocationID AND TopicID = @TopicID AND EventID = @EventID)
-INSERT INTO tblATTACHMENT(AttachmentTypeID, TweetID, AttachmentLink)
-VALUES(@AttachmentTypeID, @TweetID, @attachmentlink)
+
+BEGIN TRANSACTION T1
+    INSERT INTO tblATTACHMENT(AttachmentTypeID, TweetID, AttachmentLink)
+    VALUES(@AttachmentTypeID, @TweetID, @attachmentlink)
+COMMIT TRANSACTION T1
 
 GO
 
 CREATE PROCEDURE populate_hashtag
 @HashtagName VARCHAR(140)
 AS
-INSERT INTO tblHASHTAG(HashtagName)
-VALUES(@HashtagName)
+BEGIN TRANSACTION T1
+    INSERT INTO tblHASHTAG(HashtagName)
+    VALUES(@HashtagName)
+COMMIT TRANSACTION T1
 
 GO
 
@@ -291,5 +300,69 @@ SET @TopicID = (SELECT TopicID FROM tblTOPIC_TYPE WHERE TopicTypeName = @TopicNa
 SET @LocationID = (SELECT LocationID FROM tblLOCATION WHERE LocationName = @LocationName)
 SET @TweetID = (SELECT TweetID FROM tblTWEET WHERE Text = @Text AND UserID = @UserID 
                 AND LocationID = @LocationID AND TopicID = @TopicID AND EventID = @EventID)
-INSERT INTO tblTWEET_HASHTAG(HashtagID, TweetID)
-VALUES(@HashtagID, @TweetID)
+
+BEGIN TRANSACTION T1
+    INSERT INTO tblTWEET_HASHTAG(HashtagID, TweetID)
+    VALUES(@HashtagID, @TweetID)
+COMMIT TRANSACTION T1
+
+GO
+
+CREATE PROCEDURE populate_topic
+@TopicTypeName VARCHAR(100)
+AS
+    BEGIN TRANSACTION T1
+        INSERT INTO tblTOPIC_TYPE(TopicTypeName)
+        VALUES(@TopicTypeName)
+    COMMIT TRANSACTION T1
+GO
+
+CREATE FUNCTION FN_TweetTopic(@PK INT)
+RETURNS INT 
+AS 
+BEGIN 
+    DECLARE @PK INT 
+    SET @PK = (SELECT COUNT(T.TweetID) AS NumOfTweets
+                FROM tblTWEET T
+                WHERE T.TopicTypeID = @PK)
+    RETURN @PK
+END
+GO 
+
+ALTER TABLE tblTOPIC_TYPE
+ADD NumOfTweets AS (dbo.FN_TweetTopic(TopicTypeID))
+GO
+
+CREATE FUNCTION FN_TweetLocation(@PK INT)
+RETURNS INT 
+AS
+BEGIN 
+    DECLARE @PK INT 
+    SET @PK = (SELECT COUNT(T.TweetID) AS NumOfTweets
+                FROM tblTWEET T 
+                WHERE T.LocationID = @PK)
+    RETURN @PK
+END
+GO
+
+ALTER TABLE tblLOCATION 
+ADD NumOfTweets AS (dbo.FN_TweetLocation(LocationID))
+GO
+
+CREATE FUNCTION FN_TweetHashtag(@PK INT)
+RETURNS INT 
+AS
+BEGIN 
+    DECLARE @PK INT 
+    SET @PK = (SELECT COUNT(T.TweetID) AS NumOfTweets
+                FROM tblTWEET T
+                JOIN tblTWEET_HASHTAG TH ON T.TweetID = TH.TweetID 
+                WHERE TH.HashtagID = @PK)
+    RETURN @PK
+END
+GO
+
+ALTER TABLE tblHASHTAG 
+ADD NumOfTweets AS (dbo.FN_TweetHashtag(HashtagaID))
+GO
+
