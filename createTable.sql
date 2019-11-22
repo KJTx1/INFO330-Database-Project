@@ -272,3 +272,53 @@ AS
 INSERT INTO tblTOPIC_TYPE(TopicTypeName)
 VALUES(@TopicTypeName)
 GO
+
+CREATE FUNCTION FN_TweetTopic(@PK INT)
+RETURNS INT 
+AS 
+BEGIN 
+    DECLARE @PK INT 
+    SET @PK = (SELECT COUNT(T.TweetID) AS NumOfTweets
+                FROM tblTWEET T
+                WHERE T.TopicTypeID = @PK)
+    RETURN @PK
+END
+GO 
+
+ALTER TABLE tblTOPIC_TYPE
+ADD NumOfTweets AS (dbo.FN_TweetTopic(TopicTypeID))
+GO
+
+CREATE FUNCTION FN_TweetLocation(@PK INT)
+RETURNS INT 
+AS
+BEGIN 
+    DECLARE @PK INT 
+    SET @PK = (SELECT COUNT(T.TweetID) AS NumOfTweets
+                FROM tblTWEET T 
+                WHERE T.LocationID = @PK)
+    RETURN @PK
+END
+GO
+
+ALTER TABLE tblLOCATION 
+ADD NumOfTweets AS (dbo.FN_TweetLocation(LocationID))
+GO
+
+CREATE FUNCTION FN_TweetHashtag(@PK INT)
+RETURNS INT 
+AS
+BEGIN 
+    DECLARE @PK INT 
+    SET @PK = (SELECT COUNT(T.TweetID) AS NumOfTweets
+                FROM tblTWEET T
+                JOIN tblTWEET_HASHTAG TH ON T.TweetID = TH.TweetID 
+                WHERE TH.HashtagID = @PK)
+    RETURN @PK
+END
+GO
+
+ALTER TABLE tblHASHTAG 
+ADD NumOfTweets AS (dbo.FN_TweetHashtag(HashtagaID))
+GO
+
