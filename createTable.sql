@@ -21,6 +21,8 @@ Icon VARCHAR(100) NOT NULL,
 DateJoined DATE DEFAULT GetDate() NOT NULL
 )
 
+-- UserID1 is performing the event in relation to UserID2 -- 
+-- For example, UserID1 can follow, block and unfollow UserID2 -- 
 CREATE TABLE tblUSER_EVENT
 (UserEventID INT IDENTITY(1,1) primary key NOT NULL,
 UserEventTypeID INT FOREIGN KEY REFERENCES tblUSER_EVENT_TYPE(UserEventTypeID) NOT NULL,
@@ -321,11 +323,11 @@ CREATE FUNCTION FN_TweetTopic(@PK INT)
 RETURNS INT 
 AS 
 BEGIN 
-    DECLARE @PK INT 
-    SET @PK = (SELECT COUNT(T.TweetID) AS NumOfTweets
+    DECLARE @RET INT 
+    SET @RET = (SELECT COUNT(T.TweetID) AS NumOfTweets
                 FROM tblTWEET T
                 WHERE T.TopicTypeID = @PK)
-    RETURN @PK
+    RETURN @RET
 END
 GO 
 
@@ -365,4 +367,41 @@ GO
 ALTER TABLE tblHASHTAG 
 ADD NumOfTweets AS (dbo.FN_TweetHashtag(HashtagaID))
 GO
+
+-- Business rule: A tweet can only contain one hashtag -- 
+-- This is so we can more accurately track which hashtag is affecting engagements. -- 
+-- If there were multiple hashtags per tweet, it would be ambiguous as to which hashtag --
+-- is affecting the level of engagement. --
+CREATE FUNCTION FN_1HashtagPerTweet()
+RETURNS INT 
+AS 
+BEGIN 
+    DECLARE @PK INT 
+    IF EXISTS(SELECT T.TweetID FROM tblTWEET T 
+            JOIN tblTWEET_HASHTAG TH ON T.TweetID = TH.TweetID
+            WHERE COUNT(TH.TweetID) = 1)
+    BEGIN 
+        SET @RET = 1
+    END 
+RETURN @RET
+END
+GO
+
+ALTER TABLE tblTWEET 
+ADD CONSTRAINT CK_1HashtagPerTweet
+CHECK(dbo.FN_1HashtagPerTweet() = 1)
+
+-- Business rule: A user cannot follow the same person twice -- 
+
+
+-- Business rule: A user cannot unfollow a user they do not already follow --
+
+
+
+-- Business rule: No repeating Display_Name in tblTWEET --
+
+
+-- Cannot perform TWEET_EVENT 'Like' Twice --
+
+-- Business rule: 1 Attachment can be added per TWEET -- 
 
