@@ -321,11 +321,11 @@ CREATE FUNCTION FN_TweetTopic(@PK INT)
 RETURNS INT 
 AS 
 BEGIN 
-    DECLARE @PK INT 
-    SET @PK = (SELECT COUNT(T.TweetID) AS NumOfTweets
+    DECLARE @RET INT 
+    SET @RET = (SELECT COUNT(T.TweetID) AS NumOfTweetsTopic
                 FROM tblTWEET T
                 WHERE T.TopicTypeID = @PK)
-    RETURN @PK
+    RETURN @RET
 END
 GO 
 
@@ -337,11 +337,11 @@ CREATE FUNCTION FN_TweetLocation(@PK INT)
 RETURNS INT 
 AS
 BEGIN 
-    DECLARE @PK INT 
-    SET @PK = (SELECT COUNT(T.TweetID) AS NumOfTweets
+    DECLARE @RET INT 
+    SET @RET = (SELECT COUNT(T.TweetID) AS NumOfTweetsLocation
                 FROM tblTWEET T 
                 WHERE T.LocationID = @PK)
-    RETURN @PK
+    RETURN @RET
 END
 GO
 
@@ -353,12 +353,12 @@ CREATE FUNCTION FN_TweetHashtag(@PK INT)
 RETURNS INT 
 AS
 BEGIN 
-    DECLARE @PK INT 
-    SET @PK = (SELECT COUNT(T.TweetID) AS NumOfTweets
+    DECLARE @RET INT 
+    SET @RET = (SELECT COUNT(T.TweetID) AS NumOfTweetsHashtag
                 FROM tblTWEET T
                 JOIN tblTWEET_HASHTAG TH ON T.TweetID = TH.TweetID 
                 WHERE TH.HashtagID = @PK)
-    RETURN @PK
+    RETURN @RET
 END
 GO
 
@@ -366,3 +366,55 @@ ALTER TABLE tblHASHTAG
 ADD NumOfTweets AS (dbo.FN_TweetHashtag(HashtagaID))
 GO
 
+CREATE FUNCTION FN_FollowerPerUser(@PK INT)
+RETURNS INT 
+AS
+BEGIN 
+    DECLARE @RET INT 
+    SET @RET = (SELECT COUNT(*) AS NumOfFollowers
+                FROM tblUSER U
+                JOIN tblUSER_EVENT UE ON U.UserID = UE.User2ID
+                JOIN tblUSER_EVENT_TYPE UET ON UE.UserEventTypeID = UET.UserEventTypeID
+                WHERE UserID = @PK AND UserEventTypeName = 'Follow')
+    RETURN @RET
+END
+GO
+
+ALTER TABLE tblUSER 
+ADD NumOfFollowers AS (dbo.FN_FollowerPerUser(UserID))
+GO
+
+CREATE FUNCTION FN_FollowingPerUser(@PK INT)
+RETURNS INT 
+AS
+BEGIN 
+    DECLARE @RET INT 
+    SET @RET = (SELECT COUNT(*) AS NumOfFollowering
+                FROM tblUSER U
+                JOIN tblUSER_EVENT UE ON U.UserID = UE.User1ID
+                JOIN tblUSER_EVENT_TYPE UET ON UE.UserEventTypeID = UET.UserEventTypeID
+                WHERE UserID = @PK AND UserEventTypeName = 'Follow')
+    RETURN @RET
+END
+GO
+
+ALTER TABLE tblUSER 
+ADD NumOfFollowering AS (dbo.FN_FollowingPerUser(UserID))
+GO
+
+CREATE FUNCTION FN_TweetEventNum(@PK INT)
+RETURNS INT 
+AS
+BEGIN 
+    DECLARE @RET INT 
+    SET @RET = (SELECT COUNT(T.TweetID) AS NumOfTweetEvents
+                FROM tblTWEET T
+                JOIN tblTWEET_EVENT TE ON T.EventID = TE.EventID 
+                WHERE T.TweetID = @PK)
+    RETURN @RET
+END
+GO
+
+ALTER TABLE tblTWEET 
+ADD NumOfTweetEvents AS (dbo.FN_TweetEventNum(TweetID))
+GO
