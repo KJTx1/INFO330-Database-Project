@@ -263,3 +263,12 @@ SET @TweetID = (SELECT TweetID FROM tblTWEET WHERE Text = @text AND UserID = @Us
                 AND LocationID = @LocationID AND TopicID = @TopicID AND EventID = @EventID)
 INSERT INTO tblATTACHMENT(AttachmentTypeID, TweetID, AttachmentLink)
 VALUES(@AttachmentTypeID, TweetID, attachmentlink)
+
+GO
+
+CREATE PROCEDURE populate_topic
+@TopicTypeName VARCHAR(100)
+AS
+INSERT INTO tblTOPIC_TYPE(TopicTypeName)
+VALUES(@TopicTypeName)
+GO
