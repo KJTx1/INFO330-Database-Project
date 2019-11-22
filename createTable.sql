@@ -324,11 +324,7 @@ RETURNS INT
 AS 
 BEGIN 
     DECLARE @RET INT 
-<<<<<<< HEAD
-    SET @RET = (SELECT COUNT(T.TweetID) AS NumOfTweets
-=======
     SET @RET = (SELECT COUNT(T.TweetID) AS NumOfTweetsTopic
->>>>>>> 420100af127da8c84d61ebe46fe51298e8b5464c
                 FROM tblTWEET T
                 WHERE T.TopicTypeID = @PK)
     RETURN @RET
@@ -372,45 +368,6 @@ ALTER TABLE tblHASHTAG
 ADD NumOfTweets AS (dbo.FN_TweetHashtag(HashtagaID))
 GO
 
-<<<<<<< HEAD
--- Business rule: A tweet can only contain one hashtag -- 
--- This is so we can more accurately track which hashtag is affecting engagements. -- 
--- If there were multiple hashtags per tweet, it would be ambiguous as to which hashtag --
--- is affecting the level of engagement. --
-CREATE FUNCTION FN_1HashtagPerTweet()
-RETURNS INT 
-AS 
-BEGIN 
-    DECLARE @PK INT 
-    IF EXISTS(SELECT T.TweetID FROM tblTWEET T 
-            JOIN tblTWEET_HASHTAG TH ON T.TweetID = TH.TweetID
-            WHERE COUNT(TH.TweetID) = 1)
-    BEGIN 
-        SET @RET = 1
-    END 
-RETURN @RET
-END
-GO
-
-ALTER TABLE tblTWEET 
-ADD CONSTRAINT CK_1HashtagPerTweet
-CHECK(dbo.FN_1HashtagPerTweet() = 1)
-
--- Business rule: A user cannot follow the same person twice -- 
-
-
--- Business rule: A user cannot unfollow a user they do not already follow --
-
-
-
--- Business rule: No repeating Display_Name in tblTWEET --
-
-
--- Cannot perform TWEET_EVENT 'Like' Twice --
-
--- Business rule: 1 Attachment can be added per TWEET -- 
-
-=======
 CREATE FUNCTION FN_FollowerPerUser(@PK INT)
 RETURNS INT 
 AS
@@ -463,4 +420,41 @@ GO
 ALTER TABLE tblTWEET 
 ADD NumOfTweetEvents AS (dbo.FN_TweetEventNum(TweetID))
 GO
->>>>>>> 420100af127da8c84d61ebe46fe51298e8b5464c
+
+-- Business rule: A tweet can only contain one hashtag -- 
+-- This is so we can more accurately track which hashtag is affecting engagements. -- 
+-- If there were multiple hashtags per tweet, it would be ambiguous as to which hashtag --
+-- is affecting the level of engagement. --
+CREATE FUNCTION FN_1HashtagPerTweet()
+RETURNS INT 
+AS 
+BEGIN 
+    DECLARE @PK INT 
+    IF EXISTS(SELECT T.TweetID FROM tblTWEET T 
+            JOIN tblTWEET_HASHTAG TH ON T.TweetID = TH.TweetID
+            WHERE COUNT(TH.TweetID) = 1)
+    BEGIN 
+        SET @RET = 1
+    END 
+RETURN @RET
+END
+GO
+
+ALTER TABLE tblTWEET 
+ADD CONSTRAINT CK_1HashtagPerTweet
+CHECK(dbo.FN_1HashtagPerTweet() = 1)
+
+-- Business rule: A user cannot follow the same person twice -- 
+
+
+-- Business rule: A user cannot unfollow a user they do not already follow --
+
+
+
+-- Business rule: No repeating Display_Name in tblTWEET --
+
+
+-- Cannot perform TWEET_EVENT 'Like' Twice --
+
+
+-- Business rule: 1 Attachment can be added per TWEET -- 
