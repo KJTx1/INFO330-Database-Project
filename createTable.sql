@@ -280,6 +280,52 @@ COMMIT TRANSACTION T1
 
 GO
 
+
+EXEC populate_attachment
+@AttachmentTypeName = 'Video',
+@Text 'Fake Love Official Music Video',
+@User1Name 'ChrisC',
+@EventName 'Mention',
+@TopicName 'BTS MV',
+@LocationName 'California',
+@AttachmentLink 'https://youtu.be/7C2z4GqqS5E'
+
+EXEC populate_attachment
+@AttachmentTypeName = 'GIF',
+@Text 'THE cat',
+@User1Name 'KennytheCat',
+@EventName 'Retweet',
+@TopicName 'Cat domain',
+@LocationName 'Washington',
+@AttachmentLink 'https://images.app.goo.gl/3PrEb1ZAYazFkwubA'
+
+EXEC populate_attachment
+@AttachmentTypeName = 'Image',
+@Text 'Aurora is here',
+@User1Name 'JAsonY',
+@EventName 'Reply',
+@TopicName 'SeattleAurora',
+@LocationName 'Washington',
+@AttachmentLink 'https://images.app.goo.gl/PaH4RJqXgmua9vvR9'
+
+EXEC populate_attachment
+@AttachmentTypeName = 'Image',
+@Text 'MS',
+@User1Name 'Jchang',
+@EventName 'Reply',
+@TopicName 'CongratsJack',
+@LocationName 'Washington',
+@AttachmentLink 'https://www.microsoft.com/en-us/visitorcenter/default'
+
+EXEC populate_attachment
+@AttachmentTypeName = 'Image',
+@Text 'UofChicago',
+@User1Name 'Gthay',
+@EventName 'Retweet',
+@TopicName 'ThrowBackThursday',
+@LocationName 'Illinois',
+@AttachmentLink 'https://images.app.goo.gl/jxeo5NLf1T8triiHA'
+
 CREATE PROCEDURE populate_hashtag
 @HashtagName VARCHAR(140)
 AS
