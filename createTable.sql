@@ -2,6 +2,8 @@
 
 USE Proj_B7
 
+--------------------- Create Tables ----------------------
+
 CREATE TABLE tblTWEET 
 (TweetID INT IDENTITY(1, 1) primary key NOT NULL,
 Content varchar(140) NOT NULL,
@@ -41,7 +43,11 @@ CREATE TABLE tblTWEET_EVENT
 (EventID INT IDENTITY(1,1) primary key NOT NULL,
 EventName VARCHAR(20) NOT NULL,
 EventDescr VARCHAR(100),
+<<<<<<< HEAD
 EventObjectID OBJECT -- this can either be previous TweetID or mentioned UserID -- 
+=======
+EventObjectID INT NOT NULL
+>>>>>>> 5447c34df4207a593fbf571e56a8e5fdfd085229
 )
 
 CREATE TABLE tblLOCATION
@@ -81,14 +87,16 @@ INSERT INTO tblTopicType(TopicTypeName) VALUES ('Entertainment'), ('News'), ('Sp
 INSERT INTO tblATTACHMENT_TYPE(AttachmentTypeName) VALUES ('Video'), ('Image'), ('GIF')
 
 INSERT INTO tblTWEET_EVENT(EventName, EventDescr) VALUES 
-('Mention', 'A Tweet that contains another person’s username anywhere in the body of the Tweet'),
+('Mention', 'A Tweet that contains another person’s username anywhere in the body of the Tweet.'),
 ('Reply', 'A response to another person’s Tweet.'),
-('Retweet', 'A Tweet that you share publicly with your followers')
+('Retweet', 'A Tweet that you share publicly with your followers.'),
+('Like', 'Likes are represented by a small heart and are used to show appreciation for a Tweet.')
 
 INSERT INTO tblUSER_EVENT_TYPE(UserEventTypeName, UserEventTypeDescr) VALUES 
 ('Follow', 'The user are subscribing to their Tweets as a follower, their updates will appear in your Home timeline, that person is able to send you Direct Messages'),
 ('Block', 'Blocking helps people in restricting specific accounts from contacting them, seeing their Tweets, and following them.'),
-('Unfollow', 'People unfollow other accounts when they no longer wish to see its Tweets in its home timeline.')
+('Unfollow', 'People unfollow other accounts when they no longer wish to see its Tweets in its home timeline.'),
+('Unblock', 'When you unblock someone, they will be able to see all of their activties.')
 
 INSERT INTO tblLOCATION(LocationName) VALUES 
 ('Alabama'), ('Alaska'), ('Arizona'), ('Arkansas'), ('California'), ('Colorado'), ('Connecticut'),
@@ -103,7 +111,7 @@ INSERT INTO tblUSER(DisplayName) VALUES ('Jchang'), ('JAsonY'), ('ChrisC'), ('Gt
 
 GO
 
--- INSERT INTO tblTWEET(Content, UserID, EventID, TopicTypeID, LocationID) VALUES 
+--------------------- Populate Tables ----------------------
 
 CREATE PROCEDURE populate_tweets
     @Content VARCHAR(140),
@@ -320,6 +328,8 @@ AS
     COMMIT TRANSACTION T1
 GO
 
+--------------------- Computed Columns ----------------------
+
 CREATE FUNCTION FN_TweetTopic(@PK INT)
 RETURNS INT 
 AS 
@@ -422,6 +432,8 @@ ALTER TABLE tblTWEET
 ADD NumOfTweetEvents AS (dbo.FN_TweetEventNum(TweetID))
 GO
 
+--------------------- Business Rule ----------------------
+
 -- Business rule: A tweet can only contain one hashtag -- 
 -- This is so we can more accurately track which hashtag is affecting engagements. -- 
 -- If there were multiple hashtags per tweet, it would be ambiguous as to which hashtag --
@@ -430,10 +442,11 @@ CREATE FUNCTION FN_1HashtagPerTweet()
 RETURNS INT 
 AS 
 BEGIN 
-    DECLARE @PK INT 
-    IF EXISTS(SELECT T.TweetID FROM tblTWEET T 
-            JOIN tblTWEET_HASHTAG TH ON T.TweetID = TH.TweetID
-            WHERE COUNT(TH.TweetID) = 1)
+    DECLARE @RET INT = 0
+    IF EXISTS(SELECT TH.TweetID, COUNT(TH.HashtagID)
+            FROM tblTWEET_HASHTAG TH
+            GROUP BY TH.TweetID
+            HAVING COUNT(TH.HashtagID) > 1)
     BEGIN 
         SET @RET = 1
     END 
@@ -443,14 +456,60 @@ GO
 
 ALTER TABLE tblTWEET 
 ADD CONSTRAINT CK_1HashtagPerTweet
-CHECK(dbo.FN_1HashtagPerTweet() = 1)
+CHECK(dbo.FN_1HashtagPerTweet() = 0)
 GO
 
--- Business rule: A user cannot follow someone that has blocked them -- 
+-- Business rule: 1 Attachment can be added per TWEET -- 
+CREATE FUNCTION FN_1AttachmentPerTweet()
+RETURNS INT 
+AS 
+BEGIN 
+    DECLARE @RET INT = 0
+    IF EXISTS(SELECT TweetID, COUNT(AttachmentID)
+            FROM tblATTACHMENT
+            GROUP BY TweetID
+            HAVING COUNT(AttachmentID) > 1)
+    BEGIN 
+        SET @RET = 1
+    END 
+RETURN @RET
+END
+GO
+
+ALTER TABLE tblTWEET 
+ADD CONSTRAINT CK_1AttachmentPerTweet
+CHECK(dbo.FN_1AttachmentPerTweet() = 0)
+GO
+
+-- Business rule: A tweet cannot mention more than 20 users at a time (In order to prevent spamming)-- 
+CREATE FUNCTION FN_no20Mentions()
+RETURNS INT 
+AS 
+BEGIN 
+    DECLARE @RET INT = 0
+    IF EXISTS(SELECT T.TweetID, COUNT(T.TweetID)
+            FROM tblTWEET T 
+            JOIN tblTWEET_EVENT TE ON T.EventID = TE.EventID
+            WHERE TE.EventName = 'Mention'
+            GROUP BY T.TweetID
+            HAVING COUNT(T.TweetID) > 20)
+    BEGIN 
+        SET @RET = 1
+    END 
+RETURN @RET
+END
+GO
+
+ALTER TABLE tblTWEET 
+ADD CONSTRAINT CK_no20Mentions
+CHECK(dbo.FN_no20Mentions() = 0)
+GO
 
 -- Business rule: A user cannot unfollow a user they do not already follow --
 
--- Business rule: No repeating Display_Name in tblTWEET --
+
+
+-- Business rule: No repeating Display_Name in tblUser --
 CREATE FUNCTION FN_repeatingDisplayName()
 RETURNS INT
 AS 
@@ -473,18 +532,107 @@ ADD CONSTRAINT CK_NoRepeatingDisplayName
 CHECK(dbo.FN_repeatingDisplayName() = 0)
 GO
 
--- Cannot perform TWEET_EVENT 'Like' Twice --
+-- One user cannot follow more than 400 users per day--
+CREATE FUNCTION FN_noMore400Follow()
+RETURNS INT
+AS 
+BEGIN 
+    DECLARE @RET INT = 0
+    IF EXISTS(SELECT U.UserID, COUNT(U.UserID) 
+                FROM tblUSER U
+                JOIN tblUSER_EVENT UE ON U.UserID = UE.User1ID
+                JOIN tblUSER_EVENT_TYPE UET ON UE.UserEventTypeID = UET.UserEventTypeID
+                WHERE UET.UserEventTypeName = 'Follow'
+                GROUP BY U.UserID
+                HAVING COUNT(U.UserID) > 400
+              )
+    BEGIN 
+        SET @RET = 1
+    END
+RETURN @RET 
+END 
+GO
 
+ALTER TABLE tblUSER 
+ADD CONSTRAINT CK_noMore400Follow
+CHECK(dbo.FN_noMore400Follow() = 0)
+GO
 
--- View Generating Complex Query: Topic with more than 500 tweets -- 
+-------- ONE MORE BUSINESS RULE -------
 
--- Hashtag that has had 20% increase in engagement over the course of a week -- 
+--------------------- View Generating Complex Query ----------------------
 
--- User with 20% increase in followers -- 
+-- Topic with more than 500 tweets -- 
+CREATE VIEW [Topic With More than 500 Tweets] AS 
+(SELECT TT.TopicTypeName, COUNT(T.TweetID) AS NumOfTweets
+    FROM tblTOPIC_TYPE
+    JOIN tblTWEET T ON TT.TopicTypeID = T.TopicTypeID
+    GROUP BY TT.TopicTypeName
+    HAVING COUNT(T.TweetID) > 500)
+GO 
 
+-- Hashtag that has had increase in engagement in the past month -- 
+CREATE VIEW [Hashtag with Increase in Engagement in the past month] AS 
+(SELECT H.HashtagName, SubQ1.PreviousOne, COUNT(T.TweetID) AS CurrentOne from tblHASHTAG
+    JOIN tblTWEET_HASHTAG TH ON H.HashtagID = TH.HashtagID 
+    JOIN tblTWEET T ON TH.TweetID = T.TweetID 
+    
+    JOIN
+    (SELECT H1.HashtagName, COUNT(T1.TweetID) AS PreviousOne
+        FROM tblHASHTAG H1
+        JOIN tblTWEET_HASHTAG TH1 ON H1.HashtagID = TH1.HashtagID 
+        JOIN tblTWEET T1 ON TH1.TweetID = T1.TweetID 
+        WHERE T.Date_Time = DATEADD(month, -1, GETDATE())
+        GROUP BY H1.HashtagName
+        HAVING COUNT(T1.TweetID) > 0) 
+    AS SubQ1 ON H.HashtagName = SubQ1.HashtagName
 
--- User with 20% decrease in followers -- 
+    WHERE MONTH(T.Date_Time) = MONTH(GetDate())
+    GROUP BY H.HashtagName 
+    HAVING COUNT(T.TweetID) > SubQ1.PreviousOne
+    )
+GO
+
+-- Top 5 Users with most increase in followers in year 2018 -- 
+CREATE VIEW [Top 5 Users with most increase in followers in the past year] AS 
+(SELECT TOP 5 U.UserID, COUNT(U.UserID) AS FollowerNum2018, SQ.COUNT(U.UserID) AS FollowerNum2017, COUNT(U.UserID) - SQ.COUNT(U.UserID) AS FollowerIncrease
+    FROM tblUSER U
+    JOIN tblUSER_EVENT UE ON U.UserID = UE.User2ID
+    JOIN tblUSER_EVENT_TYPE UET ON UE.UserEventTypeID = UET.UserEventTypeID
+    JOIN 
+    (
+        SELECT COUNT(U.UserID) AS FollowerNum2017
+        FROM tblUSER U
+        JOIN tblUSER_EVENT UE ON U.UserID = UE.User2ID
+        JOIN tblUSER_EVENT_TYPE UET ON UE.UserEventTypeID = UET.UserEventTypeID
+        WHERE UET.UserEventTypeName = 'Follow' AND Year([DATE]) = '2017'
+        GROUP BY U.UserID
+        ORDER BY COUNT(U.UserID) DESC
+    ) AS SQ ON U.UserID = SQ.UserID
+    WHERE UET.UserEventTypeName = 'Follow' AND Year([DATE]) = '2018'
+    GROUP BY U.UserID
+    ORDER BY (COUNT(U.UserID) - SQ.COUNT(U.UserID)) DESC)
+GO 
+
+-- Top 5 User with most decrease in followers in the past year -- 
 
 -- User with over 500 mentions in a month -- 
 
+
 -- Top 5 hashtags in each location -- 
+CREATE VIEW [Most Popular Hashtag in Each Location] AS 
+SELECT TOP 1 L.LocationName, H.HashtagName, T.TweetID, COUNT(T.TweetID) AS NumOfTweets
+    FROM tblLOCATION L
+    JOIN tblTWEET T ON L.LocationID = T.LocationID
+    JOIN tblTWEET_HASHTAG TH ON T.TweetID = TH.TweetID 
+    JOIN tblHASHTAG H ON TH.HashtagID = H.HashtagID
+    GROUP BY L.LocationName, H.HashtagName, T.TweetID
+    ORDER BY COUNT(T.TweetID) DESC
+GO 
+
+-- back up code --
+
+/*
+BACKUP DATABASE Hiccup_gthay
+TO DISK = 'C:\SQL\Spag.bak'
+*/
