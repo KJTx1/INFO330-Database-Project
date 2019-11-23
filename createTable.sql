@@ -40,7 +40,8 @@ UserEventTypeDescr VARCHAR(100)
 CREATE TABLE tblTWEET_EVENT
 (EventID INT IDENTITY(1,1) primary key NOT NULL,
 EventName VARCHAR(20) NOT NULL,
-EventDescr VARCHAR(100)
+EventDescr VARCHAR(100),
+EventObjectID OBJECT -- this can either be previous TweetID or mentioned UserID -- 
 )
 
 CREATE TABLE tblLOCATION
@@ -443,18 +444,47 @@ GO
 ALTER TABLE tblTWEET 
 ADD CONSTRAINT CK_1HashtagPerTweet
 CHECK(dbo.FN_1HashtagPerTweet() = 1)
+GO
 
--- Business rule: A user cannot follow the same person twice -- 
-
+-- Business rule: A user cannot follow someone that has blocked them -- 
 
 -- Business rule: A user cannot unfollow a user they do not already follow --
 
-
-
 -- Business rule: No repeating Display_Name in tblTWEET --
+CREATE FUNCTION FN_repeatingDisplayName()
+RETURNS INT
+AS 
+BEGIN 
+    DECLARE @RET INT = 0
+    IF EXISTS(SELECT U.Display_Name, COUNT(*) 
+                FROM tblUSER
+                GROUP BY U.Display_Name 
+                HAVING COUNT(*) > 1
+              )
+    BEGIN 
+        SET @RET = 1
+    END
+RETURN @RET 
+END 
+GO
 
+ALTER TABLE tblUSER 
+ADD CONSTRAINT CK_NoRepeatingDisplayName
+CHECK(dbo.FN_repeatingDisplayName() = 0)
+GO
 
 -- Cannot perform TWEET_EVENT 'Like' Twice --
 
 
--- Business rule: 1 Attachment can be added per TWEET -- 
+-- View Generating Complex Query: Topic with more than 500 tweets -- 
+
+-- Hashtag that has had 20% increase in engagement over the course of a week -- 
+
+-- User with 20% increase in followers -- 
+
+
+-- User with 20% decrease in followers -- 
+
+-- User with over 500 mentions in a month -- 
+
+-- Top 5 hashtags in each location -- 

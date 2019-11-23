@@ -1,0 +1,30 @@
+USE Hiccup_gthay
+GO
+
+/*
+SELECT * 
+FROM sys.sysobjects
+WHERE xtype = 'P'
+*/
+
+BACKUP DATABASE Hiccup_gthay
+TO DISK = 'C:\SQL\Spag.bak'
+
+RESTORE filelistonly FROM DISK = 'C:\SQL\Spag.bak'
+
+
+RESTORE DATABASE Hiccup_Jack FROM DISK = 'C:\SQL\Spag.bak'
+WITH 
+MOVE 'Hiccup_gthay' to 'C:\SQL\Jack.mdf',
+MOVE 'Hiccup_gthay_log' to 'C:\SQL\Jack.ldf'
+
+BACKUP DATABASE Hiccup_Jack to disk = 'C:\SQL\Jack.bak'
+INSERT INTO tblPRODUCT (ProductName, ProductTypeID, Price, ProductDescr)
+VALUES('Turkey', (SELECT PRODUCTTypeID FROM tblPRODUCT_TYPE WHERE
+        ProductTypeName = 'Food'), 5, 'Yum')
+
+USE Hiccup_Jack
+
+BACKUP DATABASE Hiccup_Jack to disk = 'C:\SQL\Jack.bak'
+WITH DIFFERENTIAL
+
