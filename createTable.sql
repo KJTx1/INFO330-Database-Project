@@ -1,4 +1,4 @@
--- create database sausage --
+-- create database Proj_B7 --
 
 USE Proj_B7
 
