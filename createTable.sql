@@ -43,11 +43,7 @@ CREATE TABLE tblTWEET_EVENT
 (EventID INT IDENTITY(1,1) primary key NOT NULL,
 EventName VARCHAR(20) NOT NULL,
 EventDescr VARCHAR(100),
-<<<<<<< HEAD
-EventObjectID OBJECT -- this can either be previous TweetID or mentioned UserID -- 
-=======
 EventObjectID INT NOT NULL
->>>>>>> 5447c34df4207a593fbf571e56a8e5fdfd085229
 )
 
 CREATE TABLE tblLOCATION
@@ -281,7 +277,56 @@ BEGIN TRANSACTION T1
     INSERT INTO tblATTACHMENT(AttachmentTypeID, TweetID, AttachmentLink)
     VALUES(@AttachmentTypeID, @TweetID, @attachmentlink)
 COMMIT TRANSACTION T1
+GO
 
+
+EXEC populate_attachment
+@AttachmentTypeName = 'Video',
+@Text = 'Fake Love Official Music Video',
+@User1Name = 'ChrisC',
+@EventName = 'Mention',
+@TopicName = 'BTS MV',
+@LocationName = 'California',
+@AttachmentLink = 'https://youtu.be/7C2z4GqqS5E'
+
+EXEC populate_attachment
+@AttachmentTypeName = 'GIF',
+@Text = 'THE cat',
+@User1Name = 'KennytheCat',
+@EventName = 'Retweet',
+@TopicName = 'Cat domain',
+@LocationName = 'Washington',
+@AttachmentLink = 'https://images.app.goo.gl/3PrEb1ZAYazFkwubA'
+GO
+
+EXEC populate_attachment
+@AttachmentTypeName = 'Image',
+@Text = 'Aurora is here',
+@User1Name = 'JAsonY',
+@EventName = 'Reply',
+@TopicName = 'SeattleAurora',
+@LocationName = 'Washington',
+@AttachmentLink = 'https://images.app.goo.gl/PaH4RJqXgmua9vvR9'
+GO
+
+EXEC populate_attachment
+@AttachmentTypeName = 'Image',
+@Text = 'MS',
+@User1Name = 'Jchang',
+@EventName = 'Reply',
+@TopicName = 'CongratsJack',
+@LocationName = 'Washington',
+@AttachmentLink = 'https://www.microsoft.com/en-us/visitorcenter/default'
+GO
+
+EXEC populate_attachment
+@AttachmentTypeName = 'Image',
+@Text = 'UofChicago',
+@User1Name = 'Gthay',
+@EventName = 'Retweet',
+@TopicName = 'ThrowBackThursday',
+@LocationName = 'Illinois',
+@AttachmentLink = 'https://images.app.goo.gl/jxeo5NLf1T8triiHA'
 GO
 
 CREATE PROCEDURE populate_hashtag
