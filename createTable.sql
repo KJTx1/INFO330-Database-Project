@@ -43,7 +43,7 @@ CREATE TABLE tblTWEET_EVENT
 (EventID INT IDENTITY(1,1) primary key NOT NULL,
 EventName VARCHAR(20) NOT NULL,
 EventDescr VARCHAR(100),
-EventObjectID INT NOT NULL
+UserID INT FOREIGN KEY REFERENCES tblUSER(UserID) NOT NULL
 )
 
 CREATE TABLE tblLOCATION
@@ -81,12 +81,6 @@ AttachmentTypeName VARCHAR(20) NOT NULL
 INSERT INTO tblTopicType(TopicTypeName) VALUES ('Entertainment'), ('News'), ('Sports'), ('Fun')
 
 INSERT INTO tblATTACHMENT_TYPE(AttachmentTypeName) VALUES ('Video'), ('Image'), ('GIF')
-
-INSERT INTO tblTWEET_EVENT(EventName, EventDescr) VALUES 
-('Mention', 'A Tweet that contains another person’s username anywhere in the body of the Tweet.'),
-('Reply', 'A response to another person’s Tweet.'),
-('Retweet', 'A Tweet that you share publicly with your followers.'),
-('Like', 'Likes are represented by a small heart and are used to show appreciation for a Tweet.')
 
 INSERT INTO tblUSER_EVENT_TYPE(UserEventTypeName, UserEventTypeDescr) VALUES 
 ('Follow', 'The user are subscribing to their Tweets as a follower, their updates will appear in your Home timeline, that person is able to send you Direct Messages'),
@@ -205,7 +199,7 @@ EXEC populate_user
 EXEC populate_user
 @Displayname = 'Gthay',
 @Description = 'Database, Cat, and Cliff Bar',
-@Banner = 'https://scontent-sea1-1.xx.fbcdn.net/v/t1.0-9/70987434_2397297587263987_1417482354645008384_n.jpg?_nc_cat=100&_nc_oc=AQk4-SWkGbom7InDKEQQH73mya3LbMf-teSUlgXWkqF5bybksrTRUG6jM4bckpGgp_I&_nc_ht=scontent-sea1-1.xx&oh=4e8e8dd9327a24401d0b6d3b821df7ff&oe=5E452BB0',
+@Banner = 'https://s3.amazonaws.com/secretsaucefiles/photos/images/000/101/826/large/clif-bar-feature.jpeg?1485304492',
 @Icon = 'https://assets.ischool.uw.edu/ai/gthay/pci/gthay-200x-1.jpg'
 
 GO 
@@ -219,7 +213,7 @@ AS
 DECLARE @UserID1 INT, @UserID2 INT, @usereventtype INT
 SET @UserID1 = (SELECT UserID FROM tblUSER WHERE DisplayName = @user1name)
 SET @UserID1 = (SELECT UserID FROM tblUSER WHERE DisplayName = @user2name)
-SET @UserEventTypeID = (SELECT EventID FROM tblTWEET_EVENT WHERE EventName = @eventname)
+SET @UserEventTypeID = (SELECT UserEventTypeID FROM tblUSER_EVENT_TYPE WHERE UserEventTypeName = @usereventtypename)
 
 BEGIN TRANSACTION T1
     INSERT INTO tblUSER_EVENT(UserEventTypeID, User1ID, User2ID)
@@ -272,11 +266,11 @@ SET @TopicID = (SELECT TopicID FROM tblTOPIC_TYPE WHERE TopicTypeName = @TopicNa
 SET @LocationID = (SELECT LocationID FROM tblLOCATION WHERE LocationName = @LocationName)
 SET @TweetID = (SELECT TweetID FROM tblTWEET WHERE Text = @text AND UserID = @UserID 
                 AND LocationID = @LocationID AND TopicID = @TopicID AND EventID = @EventID)
-
 BEGIN TRANSACTION T1
     INSERT INTO tblATTACHMENT(AttachmentTypeID, TweetID, AttachmentLink)
     VALUES(@AttachmentTypeID, @TweetID, @attachmentlink)
 COMMIT TRANSACTION T1
+END
 GO
 
 
@@ -339,6 +333,26 @@ COMMIT TRANSACTION T1
 
 GO
 
+EXEC populate_hashtag
+@HashtagName = 'crowdfunding'
+GO
+
+EXEC populate_hashtag
+@HashtagName = 'cryptocurrency'
+GO
+
+EXEC populate_hashtag
+@HashtagName = 'medicaid'
+GO
+
+EXEC populate_hashtag
+@HashtagName = 'giveaway'
+GO
+
+EXEC populate_hashtag
+@HashtagName = 'tbt'
+GO
+
 CREATE PROCEDURE populate_tweetHashtag
 @HashtagName VARCHAR(140),
 @Text VARCHAR(140),
@@ -361,7 +375,56 @@ BEGIN TRANSACTION T1
     INSERT INTO tblTWEET_HASHTAG(HashtagID, TweetID)
     VALUES(@HashtagID, @TweetID)
 COMMIT TRANSACTION T1
+GO
 
+EXEC populate_tweetHashtag
+@HashtagName = 'crowdfunding',
+@Text = 'Considering crowdfunding? Take time to do the research first.',
+@UserName = 'Gthay',
+@EventName = '',
+@TopicName = '',
+@LocationName = '',
+@Date_Time = ''
+GO
+
+EXEC populate_tweetHashtag
+@HashtagName = 'cryptocurrency',
+@Text = 'We''ve added Jungle Offer Wall to CryptoScourge! Happy earning!',
+@UserName = 'KennytheCat',
+@EventName = '',
+@TopicName = '',
+@LocationName = '',
+@Date_Time = ''
+GO
+
+EXEC populate_tweetHashtag
+@HashtagName = 'medicaid',
+@Text = 'In what ways could member feedback help improve state #Medicaid programs?',
+@UserName = 'Jchang',
+@EventName = '',
+@TopicName = '',
+@LocationName = '',
+@Date_Time = ''
+GO
+
+EXEC populate_tweetHashtag
+@HashtagName = 'giveaway',
+@Text = 'We''re doing a full free month of Notiv, the meeting tool for professionals for anyone who signs up before the end of December!',
+@UserName = 'ChrisC',
+@EventName = '',
+@TopicName = '',
+@LocationName = '',
+@Date_Time = ''
+GO
+
+EXEC populate_tweetHashtag
+@HashtagName = 'tbt',
+@Text = 'TBT - When Her Majesty The Queen gives you a wave it’s only polite you wave back.',
+@UserName = 'JasonY',
+@EventName = '',
+@TopicName = '',
+@LocationName = '',
+@Date_Time = ''
 GO
 
 CREATE PROCEDURE populate_topic
@@ -372,6 +435,73 @@ AS
         VALUES(@TopicTypeName)
     COMMIT TRANSACTION T1
 GO
+
+EXEC populate_topic
+@TopicTypeName = 'Entertainment',
+GO
+
+EXEC populate_topic
+@TopicTypeName = 'News',
+GO
+
+EXEC populate_topic
+@TopicTypeName = 'Sports',
+GO
+
+EXEC populate_topic
+@TopicTypeName = 'Fun',
+GO
+
+EXEC populate_topic
+@TopicTypeName = 'For you',
+GO
+
+CREATE PROCEDURE populate_Tweet_Event
+@EventName VARCHAR(20),
+@EventDescr VARCHAR(100), 
+@DisplayName VARCHAR(20),
+
+AS
+DECLARE @U_ID INT
+SET @U_ID = (SELECT U.UserID FROM tblUSER U WHERE U.DisplayName = @DisplayName)
+    BEGIN TRANSACTION T1
+        INSERT INTO tblTWEET_EVENT(EventName, EventDescr, UserID)
+        VALUES(@EventName, @EventDescr, @U_ID)
+    COMMIT TRANSACTION T1
+    END
+GO
+
+-- ('Jchang'), ('JAsonY'), ('ChrisC'), ('Gthay'), ('KennytheCat')
+EXEC populate_Tweet_Event
+@EventName = 'Mention',
+@EventDescr = 'A Tweet that contains another person’s username anywhere in the body of the Tweet.', 
+@DisplayName = 'Jchang'
+
+EXEC populate_Tweet_Event
+@EventName VARCHAR(20),
+@EventDescr VARCHAR(100), 
+@DisplayName VARCHAR(20),
+
+EXEC populate_Tweet_Event
+@EventName VARCHAR(20),
+@EventDescr VARCHAR(100), 
+@DisplayName VARCHAR(20),
+
+EXEC populate_Tweet_Event
+@EventName VARCHAR(20),
+@EventDescr VARCHAR(100), 
+@DisplayName VARCHAR(20),
+
+EXEC populate_Tweet_Event
+@EventName VARCHAR(20),
+@EventDescr VARCHAR(100), 
+@DisplayName VARCHAR(20),
+
+-- INSERT INTO tblTWEET_EVENT(EventName, EventDescr) VALUES 
+-- ('Mention', 'A Tweet that contains another person’s username anywhere in the body of the Tweet.'),
+-- ('Reply', 'A response to another person’s Tweet.'),
+-- ('Retweet', 'A Tweet that you share publicly with your followers.'),
+
 
 --------------------- Computed Columns ----------------------
 
@@ -550,9 +680,29 @@ ADD CONSTRAINT CK_no20Mentions
 CHECK(dbo.FN_no20Mentions() = 0)
 GO
 
--- Business rule: A user cannot unfollow a user they do not already follow --
+-- Business rule: A user cannot mention another user more than 10 times a day --
+CREATE FUNCTION FN_NoMention10()
+RETURNS INT 
+AS
+BEGIN 
+    DECLARE @RET INT = 0
+    IF EXISTS(SELECT TE.UserID, U.UserID, COUNT(*) AS NumOfMentions FROM tblTWEET_EVENT TE
+            JOIN tblTWEET T ON TE.TweetID = T.TweetID
+            JOIN tblUSER U ON T.UserID = U.UserID 
+            WHERE TE.EventName = 'Mention'
+            GROUP BY TE.UserID, U.UserID
+            HAVING COUNT(*) > 10)
+    BEGIN 
+        SET @RET = 1
+    END 
+RETURN @RET
+END
+GO
 
-
+ALTER TABLE tblTWEET_EVENT 
+ADD CONSTRAINT CK_NoMention10 
+CHECK(dbo.FN_NoMention10() = 0)
+GO
 
 -- Business rule: No repeating Display_Name in tblUser --
 CREATE FUNCTION FN_repeatingDisplayName()
@@ -603,7 +753,21 @@ ADD CONSTRAINT CK_noMore400Follow
 CHECK(dbo.FN_noMore400Follow() = 0)
 GO
 
--------- ONE MORE BUSINESS RULE -------
+--------------------- View Generating Complex Query ----------------------
+
+-- Topic with more than 500 tweets -- 
+CREATE VIEW [Topic With More than 500 Tweets] AS 
+(SELECT TT.TopicTypeName, COUNT(T.TweetID) AS NumOfTweets
+    FROM tblTOPIC_TYPE
+    JOIN tblTWEET T ON TT.TopicTypeID = T.TopicTypeID
+    GROUP BY TT.TopicTypeName
+    HAVING COUNT(T.TweetID) > 500)
+GO 
+
+-- Hashtag that has had increase in engagement in the past month -- 
+CREATE VIEW [Hashtag with Increase in Engagement in the past month] AS 
+(SELECT H.HashtagName, SubQ1.PreviousOne, COUNT(T.TweetID) AS CurrentOne from tblHASHTAG
+    JOIN tblTWEET_HASHTAG TH ON H.HashtagID = TH.HashtagID 
 
 --------------------- View Generating Complex Query ----------------------
 
@@ -638,31 +802,40 @@ CREATE VIEW [Hashtag with Increase in Engagement in the past month] AS
     )
 GO
 
--- Top 5 Users with most increase in followers in year 2018 -- 
+-- Top 5 Users with most increase in followers in the past year -- 
 CREATE VIEW [Top 5 Users with most increase in followers in the past year] AS 
-(SELECT TOP 5 U.UserID, COUNT(U.UserID) AS FollowerNum2018, SQ.COUNT(U.UserID) AS FollowerNum2017, COUNT(U.UserID) - SQ.COUNT(U.UserID) AS FollowerIncrease
+(SELECT TOP 5 U.UserID, COUNT(U.UserID) AS FollowerNum2018, SQ.COUNT(U.UserID) AS FollowerNumOld, COUNT(U.UserID) - SQ.COUNT(U.UserID) AS FollowerIncrease
     FROM tblUSER U
     JOIN tblUSER_EVENT UE ON U.UserID = UE.User2ID
     JOIN tblUSER_EVENT_TYPE UET ON UE.UserEventTypeID = UET.UserEventTypeID
     JOIN 
     (
-        SELECT COUNT(U.UserID) AS FollowerNum2017
+        SELECT COUNT(U.UserID) AS FollowerNumOld
         FROM tblUSER U
         JOIN tblUSER_EVENT UE ON U.UserID = UE.User2ID
         JOIN tblUSER_EVENT_TYPE UET ON UE.UserEventTypeID = UET.UserEventTypeID
-        WHERE UET.UserEventTypeName = 'Follow' AND Year([DATE]) = '2017'
+        WHERE UET.UserEventTypeName = 'Follow' AND (YEAR(SELECT GetDate()) - 1) = YEAR(UET.DATE)
         GROUP BY U.UserID
         ORDER BY COUNT(U.UserID) DESC
     ) AS SQ ON U.UserID = SQ.UserID
-    WHERE UET.UserEventTypeName = 'Follow' AND Year([DATE]) = '2018'
+    WHERE UET.UserEventTypeName = 'Follow' AND YEAR(SELECT GetDate()) = YEAR(UET.DATE)
     GROUP BY U.UserID
     ORDER BY (COUNT(U.UserID) - SQ.COUNT(U.UserID)) DESC)
 GO 
 
 -- Top 5 User with most decrease in followers in the past year -- 
 
--- User with over 500 mentions in a month -- 
+/*Cannot make a reference to a Like*/
 
+-- User with over 500 mentions in a month -- 
+CREATE VIEW [Users Frequently Mentioned] AS 
+SELECT TOP 5 U.DisplayName, COUNT(*) AS NumOfMentions
+    FROM tblUSER U 
+    JOIN tblTWEET T ON T.UserID = U.UserID
+    JOIN tblTWEET_EVENT TE ON T.EventID = TE.EventID 
+    GROUP BY T.UserID 
+    HAVING COUNT(*) > 500 DESC
+GO 
 
 -- Top 5 hashtags in each location -- 
 CREATE VIEW [Most Popular Hashtag in Each Location] AS 
@@ -677,7 +850,10 @@ GO
 
 -- back up code --
 
-/*
-BACKUP DATABASE Hiccup_gthay
-TO DISK = 'C:\SQL\Spag.bak'
-*/
+BACKUP DATABASE Proj_B7
+TO DISK = 'C:\SQL\Proj_B7.bak'
+
+
+BACKUP DATABASE Proj_B7
+TO DISK = 'C:\SQL\Proj_B7.bak'
+WITH DIFFERENTIAL

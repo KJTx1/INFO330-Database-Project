@@ -12,7 +12,6 @@ TO DISK = 'C:\SQL\Spag.bak'
 
 RESTORE filelistonly FROM DISK = 'C:\SQL\Spag.bak'
 
-
 RESTORE DATABASE Hiccup_Jack FROM DISK = 'C:\SQL\Spag.bak'
 WITH 
 MOVE 'Hiccup_gthay' to 'C:\SQL\Jack.mdf',
