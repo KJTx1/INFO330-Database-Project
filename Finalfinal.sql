@@ -3,7 +3,6 @@ GO
 
 USE Proj_B7
 GO
-
 --------------------- Create Tables ----------------------
 
 CREATE TABLE tblHASHTAG
@@ -467,7 +466,6 @@ GO
 
 -- WE STOPPED HERE --
 
-
 ------ COMPUTED COLUMN  -----
 -- How many tweets are in each topic 
 
@@ -483,7 +481,7 @@ BEGIN
 END
 GO 
 
-ALTER TABLE tblTOPIC_TYPE
+ALTER TABLE tblTOPIC
 ADD NumOfTweets AS (dbo.FN_TweetTopic(TopicID))
 GO
 
@@ -521,7 +519,7 @@ END
 GO
 
 ALTER TABLE tblHASHTAG 
-ADD NumOfTweets AS (dbo.FN_TweetHashtag(HashtagaID))
+ADD NumOfTweets AS (dbo.FN_TweetHashtag(HashtagID))
 GO
 
 -- How many followers for each user
@@ -663,13 +661,13 @@ RETURNS INT
 AS
 BEGIN 
     DECLARE @RET INT = 0
-    IF EXISTS(SELECT TUE.UserID, U.UserID, COUNT(*) AS NumOfMentions 
+    IF EXISTS(SELECT TUE.UserID, U.UserID, COUNT(*) AS NumOfMentions, DAY(T.Date_Time) AS EachDay
             FROM tblTWEET T 
             JOIN tblTWEET_USER_EVENT TUE ON T.TweetID = TUE.TweetID
             JOIN tblTWEET_USER_EVENT_TYPE TUET ON TUE.EventTypeID = TUET.EventTypeID
             JOIN tblUSER U ON TUE.UserID = U.UserID 
-            WHERE TUET.EventTypeName = 'Mention'
-            GROUP BY TUE.UserID, U.UserID
+            WHERE TUET.EventTypeName = 'Mentioned' AND DAY(GetDate()) = DAY(T.Date_Time)
+            GROUP BY TUE.UserID, U.UserID, DAY(T.Date_Time)
             HAVING COUNT(*) > 10)
     BEGIN 
         SET @RET = 1
@@ -678,12 +676,12 @@ RETURN @RET
 END
 GO
 
-ALTER TABLE tblTWEET_EVENT 
+ALTER TABLE tblTWEET_USER_EVENT 
 ADD CONSTRAINT CK_NoMention10 
 CHECK(dbo.FN_NoMention10() = 0)
 GO
 
--- Business rule: No repeating Display_Name in tblUser --
+-- Business rule: No repeating DisplayName in tblUser --
 CREATE FUNCTION FN_repeatingDisplayName()
 RETURNS INT
 AS 
@@ -712,12 +710,12 @@ RETURNS INT
 AS 
 BEGIN 
     DECLARE @RET INT = 0
-    IF EXISTS(SELECT U.UserID, COUNT(U.UserID) 
+    IF EXISTS(SELECT U.UserID, COUNT(U.UserID) AS FollowingCount, DAY(UE.Date_Time) AS EachDay
                 FROM tblUSER U
                 JOIN tblUSER_EVENT UE ON U.UserID = UE.UserID1
                 JOIN tblUSER_EVENT_TYPE UET ON UE.UserEventTypeID = UET.UserEventTypeID
-                WHERE UET.UserEventTypeName = 'Follow'
-                GROUP BY U.UserID
+                WHERE UET.UserEventTypeName = 'Follow' AND DAY(GetDate()) = DAY(UE.Date_Time)
+                GROUP BY U.UserID, DAY(UE.Date_Time)
                 HAVING COUNT(U.UserID) > 400
               )
     BEGIN 
@@ -733,14 +731,28 @@ CHECK(dbo.FN_noMore400Follow() = 0)
 GO
 
 --------------------- View Generating Complex Query ----------------------
-
--- Topic with more than 500 tweets -- 
-CREATE VIEW [Topic With More than 500 Tweets] AS 
-(SELECT TT.TopicTypeName, COUNT(T.TweetID) AS NumOfTweets
-    FROM tblTOPIC_TYPE TT
+-- Topic with an increase in the number of tweets in the past month-- 
+CREATE VIEW [Topic an Increase in Number of Tweets in the Past Month] AS 
+(SELECT TT.TopicName, COUNT(T.TweetID) AS CurrentNumOfTweets, SubQ.LastMonthNumOfTweets
+    FROM tblTOPIC TT
     JOIN tblTWEET T ON TT.TopicID = T.TopicID
-    GROUP BY TT.TopicTypeName
-    HAVING COUNT(T.TweetID) > 500)
+    JOIN tblTWEET_USER_EVENT TUE ON T.TweetID = TUE.TweetID
+    JOIN tblTWEET_USER_EVENT_TYPE TUET ON TUE.EventTypeID = TUET.EventTypeID
+    JOIN 
+    (
+    SELECT TT.TopicName, COUNT(T.TweetID) AS LastMonthNumOfTweets
+        FROM tblTOPIC TT
+        JOIN tblTWEET T ON TT.TopicID = T.TopicID
+        JOIN tblTWEET_USER_EVENT TUE ON T.TweetID = TUE.TweetID
+        JOIN tblTWEET_USER_EVENT_TYPE TUET ON TUE.EventTypeID = TUET.EventTypeID
+        WHERE TUET.EventTypeName = 'Tweet' AND YEAR(GetDate()) = YEAR(T.Date_Time) AND MONTH(GetDate()) = MONTH(DATEADD(month, -1, GETDATE()))
+        GROUP BY TT.TopicName
+    ) AS SubQ ON TT.TopicName = SubQ.TopicName
+
+    WHERE TUET.EventTypeName = 'Tweet' AND YEAR(GetDate()) = YEAR(T.Date_Time) AND MONTH(GetDate()) = MONTH(T.Date_Time)  
+    GROUP BY TT.TopicName, SubQ.LastMonthNumOfTweets
+    HAVING (COUNT(T.TweetID) - SubQ.LastMonthNumOfTweets) > 0
+)
 GO 
 
 -- Hashtag that has had increase in engagement in the past month -- 
@@ -750,77 +762,80 @@ CREATE VIEW [Hashtag with Increase in Engagement in the past month] AS
     JOIN tblTWEET T ON TH.TweetID = T.TweetID 
     
     JOIN
-    (SELECT H1.HashtagName, COUNT(T1.TweetID) AS PreviousOne
+    (SELECT H1.HashtagName, T1.TweetID, COUNT(T1.TweetID) AS PreviousOne
         FROM tblHASHTAG H1
         JOIN tblTWEET_HASHTAG TH1 ON H1.HashtagID = TH1.HashtagID 
         JOIN tblTWEET T1 ON TH1.TweetID = T1.TweetID 
         WHERE T1.Date_Time = DATEADD(month, -1, GETDATE())
-        GROUP BY H1.HashtagName
+        GROUP BY H1.HashtagName, T1.TweetID
         HAVING COUNT(T1.TweetID) > 0) 
-    AS SubQ1 ON H1.HashtagName = SubQ1.HashtagName
+    AS SubQ1 ON H.HashtagName = SubQ1.HashtagName
 
     WHERE MONTH(T.Date_Time) = MONTH(GetDate())
-    GROUP BY H1.HashtagName 
+    GROUP BY H.HashtagName, SubQ1.PreviousOne
     HAVING COUNT(T.TweetID) > SubQ1.PreviousOne
-    )
+)
 GO
 
--- Top 5 Users with most increase in followers in the past year -- 
-
-CREATE VIEW [Top 5 Users with most increase in followers in the past year] AS 
-(SELECT TOP 5 WITH TIES U.UserID, COUNT(U.UserID) AS FollowerNum2018, 
-    SQ.COUNT(U.UserID) AS FollowerNumOld, COUNT(U.UserID) - SQ.COUNT(U.UserID) AS FollowerIncrease
+-- Users with an increase in followers in the past year -- 
+CREATE VIEW [Users with an increase in followers in the past year] AS 
+(SELECT U.UserID, COUNT(U.UserID) AS FollowerNumCurrent, SQ.FollowerNumOld,
+    (COUNT(U.UserID) - SQ.FollowerNumOld) AS FollowerIncrease
     FROM tblUSER U
     JOIN tblUSER_EVENT UE ON U.UserID = UE.UserID2
     JOIN tblUSER_EVENT_TYPE UET ON UE.UserEventTypeID = UET.UserEventTypeID
     JOIN 
-    (SELECT COUNT(U.UserID) AS FollowerNumOld
-        FROM tblUSER U
-        JOIN tblUSER_EVENT UE ON U.UserID = UE.UserID2
-        JOIN tblUSER_EVENT_TYPE UET ON UE.UserEventTypeID = UET.UserEventTypeID
-        WHERE UET.UserEventTypeName = 'Follow' AND (YEAR(SELECT GetDate()) - 1) = YEAR(UET.DATE)
-        GROUP BY U.UserID
-        ORDER BY COUNT(U.UserID) DESC
+    (SELECT U1.UserID, COUNT(U1.UserID) AS FollowerNumOld
+        FROM tblUSER U1
+        JOIN tblUSER_EVENT UE1 ON U1.UserID = UE1.UserID2
+        JOIN tblUSER_EVENT_TYPE UET1 ON UE1.UserEventTypeID = UET1.UserEventTypeID
+        WHERE UET1.UserEventTypeName = 'Follow' AND (YEAR(GetDate()) - 365) = YEAR(UE1.Date_Time)
+        GROUP BY U1.UserID
     ) AS SQ ON U.UserID = SQ.UserID
-    WHERE UET.UserEventTypeName = 'Follow' AND YEAR(SELECT GetDate()) = YEAR(UET.DATE)
-    GROUP BY U.UserID
-    ORDER BY (COUNT(U.UserID) - SQ.COUNT(U.UserID)) DESC)
+    WHERE UET.UserEventTypeName = 'Follow' AND YEAR(GetDate()) = YEAR(UE.Date_Time)
+    GROUP BY U.UserID, SQ.FollowerNumOld
+    HAVING ((COUNT(U.UserID) - SQ.FollowerNumOld) > 0) 
+)
 GO 
 
--- Top 5 User with most decrease in followers in the past year -- 
+-- Top 10 Tweets with the Most Likes in the Past Year-- 
+CREATE VIEW[Tweets with the Most Likes in the Past Year] AS
+(SELECT TOP 10 T.TweetID, COUNT(*) AS NumOfLikes
+FROM tblTWEET T
+JOIN tblTWEET_USER_EVENT TUE ON T.TweetID = TUE.TweetID
+JOIN tblTWEET_USER_EVENT_TYPE TUET ON TUE.EventTypeID = TUET.EventTypeID
+WHERE TUET.EventTypeName = 'Like'
+AND YEAR(GetDate()) = YEAR(T.Date_Time)
+GROUP BY T.TweetID 
+ORDER BY COUNT(*) DESC)
+GO
 
-/*Cannot make a reference to a Like*/
-
--- User with over 500 mentions in a month -- 
-        FROM tblUSER U
-        JOIN tblUSER_EVENT UE ON U.UserID = UE.UserID2
-        JOIN tblUSER_EVENT_TYPE UET ON UE.UserEventTypeID = UET.UserEventTypeID
-        WHERE UET.UserEventTypeName = 'Follow' AND (YEAR(SELECT GetDate()) - 1) = YEAR(UET.DATE)
-        GROUP BY U.UserID
-        ORDER BY COUNT(U.UserID) DESC
-    ) AS SQ ON U.UserID = SQ.UserID
-    WHERE UET.UserEventTypeName = 'Follow' AND YEAR(SELECT GetDate()) = YEAR(UET.DATE)
-    GROUP BY U.UserID
-    ORDER BY (COUNT(U.UserID) - SQ.COUNT(U.UserID)) DESC)
-GO 
-
--- Top 5 User with most decrease in followers in the past year -- 
-
-/*Cannot make a reference to a Like*/
-
--- User with over 500 mentions in a month -- 
+-- Top 10 Users with an increase in mentions in a month -- 
 CREATE VIEW [Users Frequently Mentioned] AS 
-SELECT TOP 5 WITH TIES U.DisplayName, COUNT(*) AS NumOfMentions
-    FROM tblUSER U 
-    JOIN tblTWEET T ON T.UserID = U.UserID
-    JOIN tblTWEET_EVENT TE ON T.EventID = TE.EventID 
-    GROUP BY T.UserID 
-    HAVING COUNT(*) > 500 DESC
-GO 
+(SELECT TOP 10 U.UserID, COUNT(*) AS NumOfMentions, 
+    SQ.NumOfMentionsLastMonth,
+    (COUNT(*) - SQ.NumOfMentionsLastMonth) AS Mentiondiff
+FROM tblUSER U 
+    JOIN tblTWEET_USER_EVENT TUE ON U.UserID = TUE.UserID
+    JOIN tblTWEET T ON TUE.TweetID = T.TweetID
+    JOIN tblTWEET_USER_EVENT_TYPE TUET ON TUE.EventTypeID = TUET.EventTypeID
+    JOIN (
+        SELECT U1.UserID, COUNT(*) AS NumOfMentionsLastMonth
+        FROM tblUSER U1 
+            JOIN tblTWEET_USER_EVENT TUE1 ON U1.UserID = TUE1.UserID
+            JOIN tblTWEET T1 ON TUE1.TweetID = T1.TweetID
+            JOIN tblTWEET_USER_EVENT_TYPE TUET1 ON TUE1.EventTypeID = TUET1.EventTypeID
+        WHERE TUET1.EventTypeName = 'Mentioned' AND MONTH(T1.Date_Time) = DATEADD(MONTH, -1, GETDATE())
+        GROUP BY U1.UserID
+    ) AS SQ on SQ.UserID = U.UserID
+WHERE TUET.EventTypeName = 'Mentioned' AND MONTH(T.Date_Time) = MONTH(GETDATE())
+GROUP BY U.UserID, SQ.NumOfMentionsLastMonth
+ORDER BY (COUNT(*) - SQ.NumOfMentionsLastMonth) DESC)
+GO
 
 -- Top 5 hashtags in each location -- 
 CREATE VIEW [Most Popular Hashtag in Each Location] AS 
-SELECT TOP 1 WITH TIES L.LocationName, H.HashtagName, T.TweetID, COUNT(T.TweetID) AS NumOfTweets
+SELECT TOP 5 WITH TIES L.LocationName, H.HashtagName, T.TweetID, COUNT(T.TweetID) AS NumOfTweets
     FROM tblLOCATION L
     JOIN tblTWEET T ON L.LocationID = T.LocationID
     JOIN tblTWEET_HASHTAG TH ON T.TweetID = TH.TweetID 
@@ -833,3 +848,4 @@ GO
 
 BACKUP DATABASE Proj_B7
 TO DISK = 'C:\SQL\Proj_B7.bak'
+WITH DIFFERENTIAL
